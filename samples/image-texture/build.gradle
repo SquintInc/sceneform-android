@@ -4,8 +4,8 @@ plugins {
 }
 
 android {
+    namespace 'com.google.ar.sceneform.samples.imagetexture'
     compileSdk rootProject.ext.compileSdk
-    compileSdkVersion rootProject.ext.compileSdk
 
     defaultConfig {
         applicationId "com.google.ar.sceneform.samples.imagetexture"
@@ -23,7 +23,7 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
-    aaptOptions {
+    androidResources {
         noCompress 'filamat', 'ktx'
     }
 }

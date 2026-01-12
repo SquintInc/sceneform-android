@@ -5,11 +5,12 @@ plugins {
 }
 
 android {
+    namespace 'com.google.ar.sceneform.samples.environmentlights'
     compileSdk rootProject.ext.compileSdk
-    compileSdkVersion rootProject.ext.compileSdk
 
     buildFeatures {
         dataBinding true
+        viewBinding true
     }
     defaultConfig {
         applicationId "com.google.ar.sceneform.samples.environmentlights"

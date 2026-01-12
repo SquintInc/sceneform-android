@@ -3,8 +3,9 @@ plugins {
 }
 
 android {
+    namespace 'com.google.ar.sceneform.samples.gltf'
     compileSdk rootProject.ext.compileSdk
-    compileSdkVersion rootProject.ext.compileSdk
+
     defaultConfig {
         applicationId "com.google.ar.sceneform.samples.gltf"
 
@@ -18,7 +19,7 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-    aaptOptions {
+    androidResources {
         noCompress 'filamat', 'ktx'
     }
 }

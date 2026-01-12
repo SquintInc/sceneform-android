@@ -1,15 +1,15 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
-    id 'com.vanniktech.maven.publish'
+//    id 'com.vanniktech.maven.publish'
 }
 
 group = GROUP
 version = VERSION_NAME
 
 android {
+    namespace 'com.google.ar.sceneform'
     compileSdk rootProject.ext.compileSdk
-    compileSdkVersion rootProject.ext.compileSdk
 
     defaultConfig {
         // Sceneform requires minSdk >= 24.
@@ -68,6 +68,6 @@ dependencies {
     implementation "com.github.kittinunf.fuel:fuel-coroutines:$fuel_version"
 }
 
-mavenPublish {
-    releaseSigningEnabled = project.hasProperty('signing.keyId') && project.hasProperty('signing.password')
-}
+//mavenPublish {
+//    releaseSigningEnabled = project.hasProperty('signing.keyId') && project.hasProperty('signing.password')
+//}
