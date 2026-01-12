@@ -2,7 +2,7 @@ buildscript {
     ext {
         compileSdk = 36
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 35
 
         kotlin_version = '1.9.22'
         kotlinx_coroutines_version = '1.7.3'
