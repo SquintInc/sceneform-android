@@ -11,6 +11,10 @@ android {
     namespace 'com.google.ar.sceneform'
     compileSdk rootProject.ext.compileSdk
 
+    buildFeatures {
+        buildConfig true
+    }
+
     defaultConfig {
         // Sceneform requires minSdk >= 24.
         minSdk rootProject.ext.minSdk
