@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
-//    id 'com.vanniktech.maven.publish'
+    id 'maven-publish'
 }
 
 group = GROUP
@@ -72,6 +72,15 @@ dependencies {
     implementation "com.github.kittinunf.fuel:fuel-coroutines:$fuel_version"
 }
 
-//mavenPublish {
-//    releaseSigningEnabled = project.hasProperty('signing.keyId') && project.hasProperty('signing.password')
-//}
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+                groupId = 'com.squint.sceneform'
+                artifactId = 'core'
+                version = '1.24.0-SNAPSHOT'
+            }
+        }
+    }
+}
