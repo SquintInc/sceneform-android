@@ -8,6 +8,11 @@
     <!-- Needed to load gltf from network. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Camera feature for ChromeOS compatibility. -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
     <!-- Sceneform requires OpenGLES 3.0 or later. -->
     <uses-feature
         android:glEsVersion="0x00030000"

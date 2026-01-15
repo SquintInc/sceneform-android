@@ -13,6 +13,11 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
+    <!-- Camera feature for ChromeOS compatibility. -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
     <!-- Sceneform requires OpenGLES 3.0 or later. -->
     <uses-feature
         android:glEsVersion="0x00030000"

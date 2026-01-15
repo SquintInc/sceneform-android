@@ -4,8 +4,8 @@ plugins {
 }
 
 android {
+    namespace 'com.google.ar.sceneform.samples.augmentedimages'
     compileSdk rootProject.ext.compileSdk
-    compileSdkVersion rootProject.ext.compileSdk
 
     defaultConfig {
         applicationId "com.google.ar.sceneform.samples.augmentedimages"
@@ -17,13 +17,13 @@ android {
         versionName "1.0.0"
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
-    aaptOptions {
+    androidResources {
         noCompress 'filamat', 'ktx'
     }
 }
@@ -36,7 +36,6 @@ dependencies {
 
     implementation "com.google.android.material:material:$material_version"
 
-    releaseImplementation "com.gorisse.thomas.sceneform:sceneform:1.23.0"
-    debugApi project(":sceneform")
+    implementation project(":sceneform")
 
 }

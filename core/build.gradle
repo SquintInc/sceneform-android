@@ -1,15 +1,19 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
-    id 'com.vanniktech.maven.publish'
+    id 'maven-publish'
 }
 
 group = GROUP
 version = VERSION_NAME
 
 android {
+    namespace 'com.google.ar.sceneform'
     compileSdk rootProject.ext.compileSdk
-    compileSdkVersion rootProject.ext.compileSdk
+
+    buildFeatures {
+        buildConfig true
+    }
 
     defaultConfig {
         // Sceneform requires minSdk >= 24.
@@ -23,11 +27,11 @@ android {
     compileOptions {
         // Sceneform libraries use language constructs from Java 8.
         // Add these compile options if targeting minSdk < 26.
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8.toString()
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
     buildTypes {
         release {
@@ -68,6 +72,15 @@ dependencies {
     implementation "com.github.kittinunf.fuel:fuel-coroutines:$fuel_version"
 }
 
-mavenPublish {
-    releaseSigningEnabled = project.hasProperty('signing.keyId') && project.hasProperty('signing.password')
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+                groupId = 'com.squint.sceneform'
+                artifactId = 'core'
+                version = '1.24.0-SNAPSHOT'
+            }
+        }
+    }
 }

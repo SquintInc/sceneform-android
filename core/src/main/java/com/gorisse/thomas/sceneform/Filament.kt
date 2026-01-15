@@ -3,7 +3,7 @@ package com.gorisse.thomas.sceneform
 import com.google.android.filament.EntityManager
 import com.google.android.filament.gltfio.AssetLoader
 import com.google.android.filament.gltfio.ResourceLoader
-import com.google.android.filament.gltfio.UbershaderLoader
+import com.google.android.filament.gltfio.UbershaderProvider
 import com.google.android.filament.utils.Float3
 import com.google.android.filament.utils.Float4
 import com.google.ar.sceneform.rendering.EngineInstance
@@ -18,7 +18,7 @@ object Filament {
     val entityManager
         get() = EntityManager.get()
 
-    val uberShaderLoader by lazy { UbershaderLoader(engine) }
+    val uberShaderLoader by lazy { UbershaderProvider(engine) }
 
     @JvmStatic
     val assetLoader by lazy {
@@ -27,17 +27,15 @@ object Filament {
 
     val transformManager get() = engine.transformManager
 
-    val resourceLoader by lazy { ResourceLoader(engine, true, false, false) }
+    val resourceLoader by lazy { ResourceLoader(engine, true) }
 
     val lightManager get() = engine.lightManager
 
     val iblPrefilter by lazy { IBLPrefilter(engine) }
 }
 
-fun Float4.toFloatArray() = this.let { (x, y, z, w) -> floatArrayOf(x, y, z, w) }
 fun FloatArray.toFloat4() = this.let { (x, y, z, w) -> Float4(x, y, z, w) }
 
-fun Float3.toFloatArray() = this.let { (x, y, z) -> floatArrayOf(x, y, z) }
 fun FloatArray.toFloat3() = this.let { (x, y, z) -> Float3(x, y, z) }
 
 typealias Position = Float3
