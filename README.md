@@ -1,11 +1,86 @@
-[![Maven Central](https://img.shields.io/maven-central/v/com.gorisse.thomas.sceneform/sceneform.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22com.gorisse.thomas.sceneform%22%20AND%20a:%22sceneform%22)
-[![Discord](https://img.shields.io/discord/893787194295222292?color=7389D8&label=Discord&logo=Discord&logoColor=ffffff&style=flat-square)](https://discord.gg/UbNDDBTNqb)
+# Sceneform Android - Squint Fork
+
+## 🔱 Forked Version
+
+This is a **Squint maintained fork** of [sceneform-android](https://github.com/SceneView/sceneform-android).
+
+**Upstream sources:**
+- Original project: [SceneView/sceneform-android](https://github.com/SceneView/sceneform-android)
+- Reference fork: [RGregat/sceneform-android](https://github.com/RGregat/sceneform-android)
+
+---
+
+## 🎯 Main Changes
+
+This fork includes the following major updates:
+
+### 1. **Filament 1.57.1 Upgrade**
+- Upgraded from Filament 1.21.1 to **1.57.1**
+- All material files (`.filamat`) recompiled for compatibility
+- Updated KTX environment files
+
+### 2. **Updated Dependencies**
+- ARCore SDK: **1.50.0**
+- Kotlin: **2.1.0**
+- Android Gradle Plugin: **8.7.0**
+- Java: **17**
+
+### 3. **Maven Coordinates**
+```gradle
+dependencies {
+    implementation "com.squint.sceneform:sceneform:<version>"
+}
+```
+> Replace `<version>` with the actual version you need (check `gradle.properties` for the latest version)
+
+---
+
+## 🛠️ Updating Material Files
+
+When upgrading Filament versions, all `.filamat` files must be recompiled using the `matc` tool.
+
+### Instructions:
+
+1. **Download Filament binaries** from [https://github.com/google/filament/releases](https://github.com/google/filament/releases)
+   - Choose your OS-specific binaries
+   - **Version must match** the version defined in `build.gradle` (`filament_version`)
+
+2. **Unpack and copy `matc`**
+   - Extract the downloaded archive
+   - Copy the `matc` executable to the material folder (e.g., `core/assets-sources/materials/`)
+
+3. **Compile materials**
+   - Open a terminal and navigate to the material folder
+   - Execute for every `.mat` file:
+   ```bash
+   ./matc -S -p mobile -o [outputname].filamat [inputname].mat
+   ```
+
+4. **Clean up**
+   - After all materials are compiled, **delete `matc`** from the materials folder
+
+### Material Locations:
+- **Core materials**: `core/assets-sources/materials/*.mat`
+- **UX materials**: `ux/assets-sources/materials/*.mat`
+- **Custom app materials**: Your app's material directory
+
+### Example:
+```bash
+cd core/assets-sources/materials/
+chmod +x matc
+xattr -c matc  # macOS only: remove quarantine flag
+
+./matc -S -p mobile -o sceneform_opaque_colored_material.filamat sceneform_opaque_colored_material.mat
+
+rm matc
+```
+
+📖 **More information:** [Filament Materials Documentation](https://google.github.io/filament/Materials.html) - Section 5: Compiling materials
+
+---
 
 Sceneform Maintained SDK for Android
 ====================================
----
-### ⚠️ **This framework isn't updated anymore. Consider using [Sceneview](https://github.com/SceneView/sceneview-android) in your projects instead.**
----
 
 ### Sceneform Maintained is an ARCore Android SDK with Google Filament as 3D engine. This is the continuation of the [Archived Sceneform](https://developers.google.com/sceneform/develop)
 
