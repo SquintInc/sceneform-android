@@ -27,6 +27,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -62,7 +64,12 @@ public class CameraStream {
     private static final int UNINITIALIZED_FILAMENT_RENDERABLE = -1;
 
     private final Scene scene;
-    private final int cameraTextureId;
+    // Multi-texture rotation: ARCore is told about all of these via
+    // Session.setCameraTextureNames(int[]) and writes a different one each frame
+    // (Frame.getCameraTextureName()). Filament reads from the previous frame's
+    // texture, eliminating the single-texture writer/reader race that produced
+    // full-screen green flicker on Filament 1.57+ / Adreno (EPD-12414).
+    private final int[] cameraTextureIds;
     private final IndexBuffer cameraIndexBuffer;
     private final VertexBuffer cameraVertexBuffer;
     private final FloatBuffer cameraUvCoords;
@@ -79,8 +86,15 @@ public class CameraStream {
      */
     private DepthOcclusionMode depthOcclusionMode = DepthOcclusionMode.DEPTH_OCCLUSION_DISABLED;
 
+    // One ExternalTexture per entry in cameraTextureIds. Built lazily in
+    // initializeTexture(Frame) once we have an ARCore frame to size against.
     @Nullable
-    private ExternalTexture cameraTexture;
+    private Map<Integer, ExternalTexture> cameraTextures;
+    // The ExternalTexture matching the GL texture name ARCore wrote to in the
+    // current frame; rebound onto the active material by setActiveTexture().
+    @Nullable
+    private ExternalTexture activeCameraTexture;
+    private int activeCameraTextureId = -1;
     @Nullable
     private DepthTexture depthTexture;
 
@@ -94,9 +108,9 @@ public class CameraStream {
     private boolean isTextureInitialized = false;
 
     @SuppressWarnings({"AndroidApiChecker", "FutureReturnValueIgnored", "initialization"})
-    public CameraStream(int cameraTextureId, Renderer renderer) {
+    public CameraStream(int[] cameraTextureIds, Renderer renderer) {
         scene = renderer.getFilamentScene();
-        this.cameraTextureId = cameraTextureId;
+        this.cameraTextureIds = cameraTextureIds;
 
         engine = EngineInstance.getEngine();
 
@@ -255,7 +269,7 @@ public class CameraStream {
 
         cameraMaterial.setExternalTexture(
                 MATERIAL_CAMERA_TEXTURE,
-                Preconditions.checkNotNull(cameraTexture));
+                Preconditions.checkNotNull(activeCameraTexture));
     }
 
     private void setOcclusionMaterial(Material material) {
@@ -273,7 +287,7 @@ public class CameraStream {
 
         occlusionCameraMaterial.setExternalTexture(
                 MATERIAL_CAMERA_TEXTURE,
-                Preconditions.checkNotNull(cameraTexture));
+                Preconditions.checkNotNull(activeCameraTexture));
     }
 
 
@@ -352,16 +366,38 @@ public class CameraStream {
             return;
         }
 
-        // External Camera Texture
-        if (cameraTexture == null) {
+        // Build one ExternalTexture per GL texture name in cameraTextureIds. The
+        // dimensions don't matter for SAMPLER_EXTERNAL on Filament 1.57 (it reads
+        // them from the underlying OES texture), but we forward what ARCore reports
+        // anyway for parity with the legacy single-texture path.
+        if (cameraTextures == null) {
             Camera arCamera = frame.getCamera();
             CameraIntrinsics intrinsics = arCamera.getTextureIntrinsics();
             int[] dimensions = intrinsics.getImageDimensions();
 
-            cameraTexture = new ExternalTexture(
-                    cameraTextureId,
-                    dimensions[0],
-                    dimensions[1]);
+            Map<Integer, ExternalTexture> textures = new HashMap<>(cameraTextureIds.length);
+            for (int textureId : cameraTextureIds) {
+                textures.put(textureId, new ExternalTexture(
+                        textureId,
+                        dimensions[0],
+                        dimensions[1]));
+            }
+            cameraTextures = textures;
+
+            // The texture ARCore wrote to in this frame is what we should sample
+            // first. Set it before binding the material below.
+            int initialActiveId = frame.getCameraTextureName();
+            ExternalTexture initialActive = textures.get(initialActiveId);
+            if (initialActive == null) {
+                // Defensive: fall back to the first texture so we render something
+                // instead of NPE-ing in setExternalTexture.
+                Log.w(TAG, "initializeTexture: ARCore returned unknown camera texture name="
+                        + initialActiveId + "; falling back to cameraTextureIds[0]");
+                initialActiveId = cameraTextureIds[0];
+                initialActive = textures.get(initialActiveId);
+            }
+            activeCameraTexture = initialActive;
+            activeCameraTextureId = initialActiveId;
         }
 
         if (depthOcclusionMode == DepthOcclusionMode.DEPTH_OCCLUSION_ENABLED && (
@@ -377,6 +413,50 @@ public class CameraStream {
                 isTextureInitialized = true;
                 setCameraMaterial(cameraMaterial);
                 initOrUpdateRenderableMaterial(cameraMaterial);
+            }
+        }
+    }
+
+    /**
+     * Switches the camera material's external texture to the one ARCore wrote to in the
+     * current frame. The caller (typically {@code ArSceneView#onBeginFrame}) must invoke this
+     * every frame, after {@link Session#update()}, with the value of
+     * {@link Frame#getCameraTextureName()}.
+     *
+     * <p>Without this rotation, Filament 1.57+ samples a single OES texture concurrently with
+     * ARCore's writes — there is no producer/consumer fence on a bare {@code importTexture}
+     * binding — and the resulting GPU read race shows up as full-screen green flicker on Adreno
+     * during the AR mapping flow (EPD-12414).
+     *
+     * <p>It's safe to call before {@link #initializeTexture(Frame)} has populated the texture
+     * map: the call is a no-op in that case, and the first {@code initializeTexture} run will
+     * pick the active texture from the same {@code Frame#getCameraTextureName()} value.
+     */
+    public void setActiveTexture(int textureName) {
+        if (cameraTextures == null) {
+            return;
+        }
+        if (textureName == activeCameraTextureId) {
+            return;
+        }
+        ExternalTexture texture = cameraTextures.get(textureName);
+        if (texture == null) {
+            Log.w(TAG, "setActiveTexture: ARCore returned an unknown camera texture name="
+                    + textureName);
+            return;
+        }
+        activeCameraTexture = texture;
+        activeCameraTextureId = textureName;
+
+        // Rebind whichever material is currently driving the camera-stream renderable.
+        if (depthOcclusionMode == DepthOcclusionMode.DEPTH_OCCLUSION_ENABLED &&
+                (depthMode == DepthMode.DEPTH || depthMode == DepthMode.RAW_DEPTH)) {
+            if (occlusionCameraMaterial != null) {
+                occlusionCameraMaterial.setExternalTexture(MATERIAL_CAMERA_TEXTURE, texture);
+            }
+        } else {
+            if (cameraMaterial != null) {
+                cameraMaterial.setExternalTexture(MATERIAL_CAMERA_TEXTURE, texture);
             }
         }
     }

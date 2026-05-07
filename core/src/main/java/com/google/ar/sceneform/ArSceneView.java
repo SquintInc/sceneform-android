@@ -56,7 +56,12 @@ public class ArSceneView extends SceneView {
     // pauseResumeTask is modified on the main thread only.  It may be completed on background
     // threads however.
     private final SequentialTask pauseResumeTask = new SequentialTask();
-    public int cameraTextureId;
+    // Multi-texture rotation: ARCore writes to one of these per frame, Filament reads
+    // a different one. Sceneview uses 6; smaller counts can still race under heavy GPU
+    // load. See CameraStream and EPD-12414 for the rationale (green-flicker fix on
+    // Filament 1.57+).
+    private static final int CAMERA_TEXTURE_COUNT = 6;
+    public int[] cameraTextureIds;
     private boolean hasSetTextureNames = false;
     @Nullable
     private Session session;
@@ -456,7 +461,7 @@ public class ArSceneView extends SceneView {
             // This is done during onBeginFrame rather than setSession since the session is
             // not guaranteed to have been initialized during the execution of setSession.
             if (!hasSetTextureNames) {
-                session.setCameraTextureName(cameraTextureId);
+                session.setCameraTextureNames(cameraTextureIds);
                 hasSetTextureNames = true;
             }
 
@@ -466,6 +471,12 @@ public class ArSceneView extends SceneView {
                 isProcessingFrame.set(false);
                 return false;
             }
+
+            // Per-frame: bind the texture ARCore wrote to in this frame as the active
+            // camera-stream texture. Without this rotation, Filament samples a single OES
+            // texture concurrently with ARCore's writes and we get full-screen green
+            // flicker on Adreno (EPD-12414).
+            cameraStream.setActiveTexture(frame.getCameraTextureName());
 
             if (currentFrameTimestamp == frame.getTimestamp()) {
                 arFrameUpdated = false;
@@ -561,8 +572,11 @@ public class ArSceneView extends SceneView {
         planeRenderer = new PlaneRenderer(renderer);
 
         // Initialize Camera Stream
-        cameraTextureId = GLHelper.createCameraTexture();
-        cameraStream = new CameraStream(cameraTextureId, renderer);
+        cameraTextureIds = new int[CAMERA_TEXTURE_COUNT];
+        for (int i = 0; i < cameraTextureIds.length; i++) {
+            cameraTextureIds[i] = GLHelper.createCameraTexture();
+        }
+        cameraStream = new CameraStream(cameraTextureIds, renderer);
     }
 
     public void setCameraStreamRenderPriority(@IntRange(from = 0L, to = 7L) int priority) {
