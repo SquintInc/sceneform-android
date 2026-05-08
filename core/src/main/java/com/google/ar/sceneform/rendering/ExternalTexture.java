@@ -56,19 +56,31 @@ public class ExternalTexture {
     /**
      * Creates an ExternalTexture from an OpenGL ES textureId without a SurfaceTexture. For internal
      * use only.
+     *
+     * <p>The {@code textureId} must be a {@code GL_TEXTURE_EXTERNAL_OES} texture (as produced by
+     * {@code GLHelper.createCameraTexture()}) that ARCore writes camera frames into via
+     * {@code Session.setCameraTextureName}. Filament samples the same GL texture through a
+     * {@code samplerExternal} parameter declared by the camera material.
+     *
+     * <p>Format must be {@code RGB16F} on Filament 1.57+. Earlier versions of this class used
+     * {@code RGB8}, which silently produces full-screen green flicker on Adreno GPUs with the new
+     * Filament release because the OES external sampler hits a backend format mismatch and reads
+     * uninitialized GPU memory. {@code RGB16F} matches the reference Sceneview implementation
+     * (see {@code arsceneview/.../ARCameraStream.kt#cameraTextures}). Tracked in EPD-12414.
+     *
+     * <p>{@code width} and {@code height} are intentionally not forwarded to the builder: with
+     * {@code importTexture(...)} the dimensions come from the underlying GL texture, and supplying
+     * them on the builder caused validation conflicts on Filament 1.57.
      */
     public ExternalTexture(int textureId, int width, int height) {
         this.surfaceTexture = null;
         this.surface = null;
         this.filamentStream = null;
 
-        this.filamentTexture = new Texture
-                .Builder()
-                .importTexture(textureId)
-                .width(width)
-                .height(height)
+        this.filamentTexture = new Texture.Builder()
                 .sampler(Texture.Sampler.SAMPLER_EXTERNAL)
-                .format(Texture.InternalFormat.RGB8)
+                .format(Texture.InternalFormat.RGB16F)
+                .importTexture((long) textureId)
                 .build(EngineInstance.getEngine().getFilamentEngine());
 
         ResourceManager.getInstance()
